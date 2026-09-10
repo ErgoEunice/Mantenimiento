@@ -1,4 +1,6 @@
-streamlit
+streamlit-js-eval
+geopy
+Pillow
 fpdf2
 reportlab
-get_geolocation
+streamlit
