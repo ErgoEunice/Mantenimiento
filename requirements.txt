@@ -1,3 +1,4 @@
 streamlit
 fpdf2
 reportlab
+get_geolocation
