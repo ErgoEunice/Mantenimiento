@@ -20,7 +20,7 @@ from reportlab.pdfgen import canvas
 # ==========================================
 st.set_page_config(
     page_title="Reportes de Mantenimiento | Ergo Solar",
-    page_icon="☀️",
+    page_icon="Ergogo.png",
     layout="wide"
 )
 
@@ -433,12 +433,12 @@ for i in range(st.session_state.num_observaciones):
         col_obs1, col_obs2 = st.columns([2, 1])
         
         with col_obs1:
-            tit_obs = st.text_input(f"Observación #{i+1}", key=f"obs_title_{i}")
-            desc_obs = st.text_area(f"Descripción #{i+1}", key=f"obs_desc_{i}")
+            tit_obs = st.text_input(f"Observación #{i+1}", placeholder = "Ej. Paneles sucios/ Torques flojos/ Quemaduras/ Cableado suelto/ etc.", key = f"obs_title_{i}")
+            desc_obs = st.text_area(f"Descripción #{i+1}", placeholder = "Ej. Los paneles presentan exceso del polvo/ Los torques no coinciden con las marcas/ Se observan quemaduras en el cableado del ITM del inversor/ Los cables debajo de los paneles no están sujetos a la estructura/ etc.", key=f"obs_desc_{i}")
         
         with col_obs2:
             foto_obs = st.file_uploader(f"Fotografía / Evidencia #{i+1}", type=["jpg", "png", "jpeg"], key=f"obs_foto_{i}")
-            pie_obs = st.text_input(f"Pie de Foto #{i+1}", key=f"obs_pie_{i}")
+            pie_obs = st.text_input(f"Pie de Foto #{i+1}", placeholder = "Describe lo que se observa en la fotografía agregada", key=f"obs_pie_{i}")
             
         inspecciones_data.append({
             'titulo': tit_obs,
@@ -465,8 +465,8 @@ for j in range(st.session_state.num_actividades):
         col_act1, col_act2 = st.columns([2, 1])
 
         with col_act1:
-            tit_act = st.text_input(f"Actividad Realizada #{j+1}", key=f"act_title_{j}")
-            desc_act = st.text_area(f"Descripción de la Actividad #{j+1}", key=f"act_desc_{j}")
+            tit_act = st.text_input(f"Actividad Realizada #{j+1}", placeholder = "Ej. Limpieza de paneles/ Reapriete de torques/ Cambio de cableado/ Sujetado de cableado/ etc.", key=f"act_title_{j}")
+            desc_act = st.text_area(f"Descripción de la Actividad #{j+1}", placeholder = "Se limpiaron los paneles utilizando jabón y trapos especiales/ Se hizo el reapriete de los torques en ITM, paneles, inversores/ Se reemplazó el cableado quemado en el ITM del inversor/ Se sujetaron con cinchos los cables debajo de los paneles/ etc.", key=f"act_desc_{j}")
 
         with col_act2:
             st.markdown("**Evidencias / Fotografía**")
@@ -476,7 +476,7 @@ for j in range(st.session_state.num_actividades):
             
             for k in range(num_fotos_actuales):
                 foto_file = st.file_uploader(f"Fotografía #{k+1} (Act. #{j+1})", type=["jpg", "png", "jpeg"], key=f"act_foto_{j}_{k}")
-                pie_file = st.text_input(f"Pie de foto #{k+1} (Act. #{j+1})", key=f"act_pie_{j}_{k}")
+                pie_file = st.text_input(f"Pie de foto #{k+1} (Act. #{j+1})", placeholder = "Describe lo que se observa en la fotografía agregada", key=f"act_pie_{j}_{k}")
                 
                 if foto_file is not None:
                     fotos_actividad.append({'archivo': foto_file, 'pie': pie_file})
@@ -527,6 +527,7 @@ if tipo_sistema == "Monofásico":
 
     # 1. ESTADO FÍSICO
     st.markdown("#### 🔍 Estado Físico")
+    st.info("Describe el estado físico actual de cada uno de los siguientes elementos")
     resultados_data.append({
         'medicion': "--- ESTADO FÍSICO ---", 
         'valor': "", 
@@ -534,8 +535,17 @@ if tipo_sistema == "Monofásico":
         'conclusion': "", 
         'es_categoria': True
     })
-
-    elementos_fisicos = ["Cableado", "Conexiones", "Corrosión", "Caja de Diodos", "Quemaduras"]
+    placeholders = {
+    "Tablero": "Ej. Bien torqueado/ conectado, sucio, con humedad, etc.",
+    "Paneles": "Ej. En buen estado, rotos, sucios, etc.",
+    "ITM": "Ej. En buen estado, presencia de quemaduras, etc.",
+    "Cableado": "Ej. Correctamente conectado, etiquetado, coincide con el diagrama unifilar, etc.",
+    "Canalización": "Ej. Correctamente instalada, con presencia de corrosión, etc.",
+    "Inversores": "Ej. Bien conectado, en funcionamiento, desconectado, etc.",
+    "Estructura": "Ej. con presencia de corrosión, bien sujeta/torqueada, etc.",
+    "Monitoreo (DataLogger, ErgoMeter, Router)": "Ej. Bien ubicado, bien conectado, en funcionamiento, etc."
+    } 
+    elementos_fisicos = ["Tablero", "Paneles", "ITM", "Cableado", "Canalización", "Inversores", "Estructura", "Monitoreo (DataLogger, ErgoMeter, Router)"]
 
     col_h1, col_h2 = st.columns([1, 3])
     with col_h1:
@@ -545,13 +555,17 @@ if tipo_sistema == "Monofásico":
 
     for idx, elem in enumerate(elementos_fisicos):
         c1, c2 = st.columns([1, 3])
-        
+    
         with c1:
             st.markdown(f"**{elem}**")
-            
+        
         with c2:
+        # Obtenemos el placeholder del diccionario (con un mensaje por defecto en caso de no encontrar la clave)
+            ph_texto = placeholders.get(elem, "Describe el estado físico del elemento")
+        
             desc_f = st.text_input(
                 f"Estado de {elem}", 
+                placeholder=ph_texto,
                 key=f"mono_fis_desc_{idx}", 
                 label_visibility="collapsed"
             )
@@ -567,7 +581,8 @@ if tipo_sistema == "Monofásico":
     st.divider()
 
     # 2. ESTADO ELÉCTRICO - Mediciones en Corriente Directa (CD)
-    st.markdown("#### ☀️ Mediciones en Corriente Directa (CD)")
+    st.markdown("#### 🔍 Estado Eléctrico")
+    st.markdown("##### ☀️ Mediciones en Corriente Directa (CD)")
     resultados_data.append({
         'medicion': "--- MEDICIONES EN CORRIENTE DIRECTA (CD) ---", 
         'valor': "", 
@@ -582,203 +597,261 @@ if tipo_sistema == "Monofásico":
     )
 
     # ==========================================
-    # TABLA 1: VOLTAJE POR CADENA
+    # BLOQUE 1: VOLTAJE POR CADENA
     # ==========================================
-    st.markdown("##### ⚡ Voltaje por Cadena")
-    
-    col_v1, col_v2, col_v3 = st.columns([1.5, 2.5, 2.5])
-    with col_v1:
-        st.markdown("**Voltaje por cadena (V)**")
-    with col_v2:
-        st.markdown("**Valor medido**")
-    with col_v3:
-        st.markdown("**# de paneles** *(Cad / Voc)*")
-
-    dict_voltajes = {}
-    dict_paneles = {}
-
+    st.markdown("###### ⚡ Voltaje por cadena")
     for s in range(num_strings):
-        c1, c2, c3 = st.columns([1.5, 2.5, 2.5])
-        
+        c1, c2 = st.columns([1, 3])
         with c1:
-            st.markdown(f"**Cad {s+1}**")
-            
+            st.markdown(f"**Cadena {s+1}**")
         with c2:
             val_v = st.text_input(
-                f"Voltaje Cad #{s+1}", 
-                placeholder="Ingrese valor medido", 
+                f"Voltaje Cadena {s+1}", 
+                placeholder="(valor obtenido en campo)", 
                 key=f"voc_val_{s}", 
                 label_visibility="collapsed"
             )
-            dict_voltajes[s] = val_v
-
-        with c3:
-            try:
-                val_v_float = float(val_v) if val_v and val_v.strip() != "" else 0.0
-                if voc_panel_float > 0 and val_v_float > 0:
-                    num_paneles_calc = round(val_v_float / voc_panel_float, 2)
-                    str_paneles = f"{num_paneles_calc}"
-                else:
-                    str_paneles = "Ingresar Voc"
-            except ValueError:
-                str_paneles = "Inválido"
-
-            st.text_input(
-                f"# Paneles Cad #{s+1}", 
-                value=str_paneles, 
-                disabled=True, 
-                key=f"paneles_calc_{s}", 
-                label_visibility="collapsed"
-            )
-            dict_paneles[s] = str_paneles
-
-    st.write("") # Espaciador entre tablas
-
-    # ==========================================
-    # TABLA 2: CORRIENTE POR CADENA
-    # ==========================================
-    st.markdown("##### 🔌 Corriente por Cadena")
-    
-    col_i1, col_i2, col_i3 = st.columns([1.5, 2.5, 2.5])
-    with col_i1:
-        st.markdown("**Corriente por cadena**")
-    with col_i2:
-        st.markdown("**Valor medido**")
-    with col_i3:
-        st.markdown("**Corriente máxima de operación**")
-
-    for s in range(num_strings):
-        c1, c2, c3 = st.columns([1.5, 2.5, 2.5])
-        
-        with c1:
-            st.markdown(f"**Cad {s+1}**")
             
+        resultados_data.append({
+            'medicion': f"Cadena #{s+1} - Voltaje (V)",
+            'valor': val_v if val_v else "-",
+            'criterio': "N/A",
+            'conclusion': "N/A",
+            'es_categoria': False
+        })
+
+    st.write("") # Espaciado entre tablas
+
+    # ==========================================
+    # BLOQUE 2: CORRIENTE POR CADENA
+    # ==========================================
+    st.markdown("###### ⚡ Corriente por cadena")
+    for s in range(num_strings):
+        c1, c2 = st.columns([1, 3])
+        with c1:
+            st.markdown(f"**Cadena {s+1}**")
         with c2:
             val_i = st.text_input(
-                f"Corriente Cad #{s+1}", 
-                placeholder="Ingrese valor medido", 
+                f"Corriente Cadena {s+1}", 
+                placeholder="(valor obtenido en campo)", 
                 key=f"icd_val_{s}", 
                 label_visibility="collapsed"
             )
 
-        with c3:
-            st.text_input(
-                f"Imax Cad #{s+1}", 
-                value=f"{imax_ref_val} A" if imax_ref_val != "N/A" else "N/A", 
-                disabled=True, 
-                key=f"imax_disp_{s}", 
-                label_visibility="collapsed"
-            )
-
-        # Registro en PDF
-        resultados_data.append({
-            'medicion': f"Cadena #{s+1} - Voltaje (V)",
-            'valor': dict_voltajes.get(s, "-"),
-            'criterio': f"# Paneles: {dict_paneles.get(s, 'N/A')}",
-            'conclusion': "N/A",
-            'es_categoria': False
-        })
-        
         resultados_data.append({
             'medicion': f"Cadena #{s+1} - Corriente (A)",
             'valor': val_i if val_i else "-",
-            'criterio': f"Imax Ref: {imax_ref_val} A",
+            'criterio': "N/A",
             'conclusion': "N/A",
             'es_categoria': False
         })
 
     st.divider()
-        
-# 3. ESTADO ELÉCTRICO - Mediciones en Corriente Alterna (CA)
-    st.markdown("#### ⚡ Mediciones en Corriente Alterna (CA)")
+
+# --- ESTADO ELÉCTRICO - CORRIENTE ALTERNA (CA) ---
+    st.markdown("##### ⚡ Mediciones en Corriente Alterna (CA)")
+
     resultados_data.append({
-        'medicion': "--- MEDICIONES EN CORRIENTE ALTERNA (CA) ---", 
+        'medicion': "--- ESTADO ELÉCTRICO (CA) ---", 
         'valor': "", 
         'criterio': "", 
         'conclusion': "", 
         'es_categoria': True
     })
 
-    # Encabezados estilo tabla
-    col_ca1, col_ca2, col_ca3, col_ca4 = st.columns([2.5, 2.5, 2.5, 1.5])
-    with col_ca1:
-        st.markdown("**Medida**")
-    with col_ca2:
-        st.markdown("**Valor obtenido (V)**")
-    with col_ca3:
-        st.markdown("**Valor de referencia**")
-    with col_ca4:
-        st.markdown("**¿En rango?**")
+    # --- CAMPOS DE ENTRADA GLOBALES (Según encabezado de la imagen) ---
+    col_v_sys, col_i_nom = st.columns(2)
+    with col_v_sys:
+        voltaje_sistema = st.selectbox(
+            "Voltaje del sistema (V):", 
+            options=[480, 440, 220, 127], 
+            index=0, 
+        key="v_sistema_ca"
+        )
+    with col_i_nom:
+        corriente_nominal = st.number_input(
+            "Corriente nominal del ITM (A):", 
+            min_value=0, value=500, step=10, key="i_nominal_ca"
+        )
 
-    mediciones_ca = [
-        ("Voltaje línea - neutro", "110 - 130"),
-        ("Voltaje línea - fase", "110 - 130"),
-        ("Voltaje neutro - tierra", "< 5")
+    # 1. Selector de número de inversores (Contador)
+    num_inversores = st.number_input(
+        "Número de Inversores a evaluar:", 
+        min_value=1, max_value=10, value=1, step=1, key="num_inversores_ca"
+    )
+
+    # Definición de mediciones de voltaje según la tabla
+    mediciones_voltaje = [
+        ("Voltaje Línea - Neutro", "LN", "±10%"),
+        ("Voltaje Línea Tierra", "LT", "±10%"),
+        ("Voltaje Neutro - Tierra", "NT", "2V")
     ]
 
-    for idx, (med_name, ref_defecto) in enumerate(mediciones_ca):
-        c1, c2, c3, c4 = st.columns([2.5, 2.5, 2.5, 1.5])
+    mediciones_corriente = [
+        ("Corriente de Línea", "LINEA", "80% del ITM"),
+        ("Corriente de Neutro", "NEUTRO", "N/A"),
+        ("Corriente de Tierra", "TIERRA", "3mA")
+    ]
+
+    # 2. Generación dinámica de secciones (Inversores dinámicos + Secciones fijas)
+    secciones_ca = []
+    for i in range(num_inversores):
+        secciones_ca.append((f"Inversor {i+1}", f"inv_{i+1}"))
+
+    secciones_ca.append(("Bloque de distribución", "bloq"))
+    secciones_ca.append(("Interruptor", "inter"))
+
+
+    # --- BLOQUE 1: VOLTAJES (CA) ---
+    st.subheader("Voltajes")
+
+    for titulo_sec, prefix in secciones_ca:
+        st.info(f"**{titulo_sec} - Voltajes**")
         
-        # 1. Medida
-        with c1:
-            st.markdown(f"**{med_name}**")
+        # Encabezados de tabla exactamente como en la imagen
+        h1, h2, h3, h4 = st.columns([3, 2.5, 2, 2.5])
+        with h1: st.caption("**Voltajes**")
+        with h2: st.caption("**Valor Medido**")
+        with h3: st.caption("**Límite de tolerancia**")
+        with h4: st.caption("**¿En rango?**")
 
-        # 2. Valor obtenido (ingresado por el usuario)
-        with c2:
-            val_obt = st.text_input(
-                f"Valor {med_name}", 
-                placeholder="Valor medido", 
-                key=f"ca_val_{idx}", 
-                label_visibility="collapsed"
-            )
+        # Renderizar filas y capturar datos por sección
+        for idx, (med_name, grupo, limite_tol) in enumerate(mediciones_voltaje):
+            c1, c2, c3, c4 = st.columns([3, 2.5, 2, 2.5])
+            
+            with c1:
+                st.markdown(f"**{med_name}**")
 
-        # 3. Valor de referencia
-        with c3:
-            val_ref = st.text_input(
-                f"Ref {med_name}", 
-                value=ref_defecto, 
-                placeholder="Ej. 110 - 130 o < 5", 
-                key=f"ca_crit_{idx}", 
-                label_visibility="collapsed"
-            )
+            with c2:
+                val_obt = st.text_input(
+                    f"Valor {titulo_sec} - {med_name}", 
+                    placeholder="Ingresar V", 
+                    key=f"{prefix}_volt_val_{idx}", 
+                    label_visibility="collapsed"
+                )
 
-        # 4. Evaluación automática de Rango (☑ / ☒)
-        estado_rango = "---"
-        
-        if val_obt and val_obt.strip() != "":
-            try:
-                v_num = float(val_obt.strip())
-                ref_clean = val_ref.strip()
+            # Lógica de evaluación basada exactamente en la imagen
+            estado_rango = "---"
+            if val_obt and val_obt.strip() != "":
+                try:
+                    val_num = float(val_obt.strip())
 
-                if "<" in ref_clean:
-                    limite = float(ref_clean.replace("<", "").strip())
-                    estado_rango = "☑" if v_num < limite else "☒"
-                elif ">" in ref_clean:
-                    limite = float(ref_clean.replace(">", "").strip())
-                    estado_rango = "☑" if v_num > limite else "☒"
-                elif "-" in ref_clean:
-                    partes = ref_clean.split("-")
-                    min_v = float(partes[0].strip())
-                    max_v = float(partes[1].strip())
-                    estado_rango = "☑" if min_v <= v_num <= max_v else "☒"
-                else:
-                    # Tolerancia +- 5% para valores fijos
-                    r_num = float(ref_clean)
-                    estado_rango = "☑" if (r_num * 0.95) <= v_num <= (r_num * 1.05) else "☒"
-            except ValueError:
-                estado_rango = "⚠️"
+                    # 1. Voltaje Línea-Neutro y Voltaje Línea-Tierra (±10% del Voltaje del sistema)
+                    if grupo in ["LN", "LT"]:
+                        v_min = voltaje_sistema * 0.90
+                        v_max = voltaje_sistema * 1.10
+                        if v_min <= val_num <= v_max:
+                            estado_rango = "☑"
+                        else:
+                            estado_rango = "☒"
+                            
+                    # 2. Voltaje Neutro - Tierra (Menor o igual a 2V = ☑, mayor a 2V = ☒)
+                    elif grupo == "NT":
+                        if val_num <= 2.0:
+                            estado_rango = "☑"
+                        else:
+                            estado_rango = "☒"
 
-        with c4:
-            st.markdown(f"### {estado_rango}")
+                except ValueError:
+                    estado_rango = "⚠️"
 
-        # Registro para el PDF
-        resultados_data.append({
-            'medicion': med_name,
-            'valor': f"{val_obt} V" if val_obt else "-",
-            'criterio': val_ref,
-            'conclusion': "En Rango (☑)" if estado_rango == "☑" else ("Fuera de Rango (☒)" if estado_rango == "☒" else "N/A"),
-            'es_categoria': False
-        })
+            with c3:
+                st.markdown(f"`{limite_tol}`")
+
+            with c4:
+                st.markdown(f"### {estado_rango}")
+
+            # Guardar en reporte final
+            resultados_data.append({
+                'medicion': f"{titulo_sec} - {med_name}",
+                'valor': f"{val_obt} V" if val_obt else "-",
+                'criterio': f"Tolerancia {limite_tol}",
+                'conclusion': estado_rango,
+                'es_categoria': False
+            })
+
+    st.divider()
+# --- BLOQUE 2: CORRIENTES (CA) ---
+    st.subheader("Corrientes")
+    for titulo_sec, prefix in secciones_ca:
+            st.info(f"**{titulo_sec} - Corrientes**")
+            
+            # Encabezados de tabla alineados a la imagen
+            h1, h2, h3, h4 = st.columns([3, 2.5, 2, 2.5])
+            with h1: st.caption("**Corrientes**")
+            with h2: st.caption("**Valor Medido**")
+            with h3: st.caption("**Límite de tolerancia**")
+            with h4: st.caption("**¿En rango?**")
+
+            # Diccionario auxiliar para comparar la corriente de Neutro contra la de Línea en la misma sección
+            valores_seccion = {}
+
+            for idx, (med_name, tipo_med, limite_tol) in enumerate(mediciones_corriente):
+                c1, c2, c3, c4 = st.columns([3, 2.5, 2, 2.5])
+                
+                with c1:
+                    st.markdown(f"**{med_name}**")
+
+                with c2:
+                    # El placeholder indica Amperios o Miliamperios según el tipo de lectura
+                    ph_texto = "Ingresar mA" if tipo_med == "TIERRA" else "Ingresar A"
+                    val_obt = st.text_input(
+                        f"Valor {titulo_sec} - {med_name}", 
+                        placeholder=ph_texto, 
+                        key=f"{prefix}_curr_val_{idx}", 
+                        label_visibility="collapsed"
+                    )
+
+                # Lógica de evaluación basada exactamente en la imagen
+                estado_rango = "---"
+                if val_obt and val_obt.strip() != "":
+                    try:
+                        val_num = float(val_obt.strip())
+                        valores_seccion[tipo_med] = val_num
+
+                        # 1. Corriente de Línea: Menor o igual al 80% de la capacidad nominal del ITM
+                        if tipo_med == "LINEA":
+                            limite_itm_80 = corriente_nominal * 0.80
+                            if val_num <= limite_itm_80:
+                                estado_rango = "☑"
+                            else:
+                                estado_rango = "☒"
+
+                        # 2. Corriente de Neutro: Igual a la Corriente de Línea ingresada
+                        elif tipo_med == "NEUTRO":
+                            if "LINEA" in valores_seccion:
+                                if val_num == valores_seccion["LINEA"]:
+                                    estado_rango = "☑"
+                                else:
+                                    estado_rango = "☒"
+                            else:
+                                estado_rango = "---"
+
+                        # 3. Corriente de Tierra: Menor o igual a 3 mA
+                        elif tipo_med == "TIERRA":
+                            if val_num <= 3.0:
+                                estado_rango = "☑"
+                            else:
+                                estado_rango = "☒"
+
+                    except ValueError:
+                        estado_rango = "⚠️"
+
+                with c3:
+                    st.markdown(f"`{limite_tol}`")
+
+                with c4:
+                    st.markdown(f"### {estado_rango}")
+
+                # Guardar en reporte final
+                unidad = "mA" if tipo_med == "TIERRA" else "A"
+                resultados_data.append({
+                    'medicion': f"{titulo_sec} - {med_name}",
+                    'valor': f"{val_obt} {unidad}" if val_obt else "-",
+                    'criterio': f"Tolerancia {limite_tol}",
+                    'conclusion': estado_rango,
+                    'es_categoria': False
+                })
 
     st.divider()
 
@@ -972,6 +1045,7 @@ else:
 
     # 1. ESTADO FÍSICO
     st.markdown("#### 🔍 Estado Físico")
+    st.info("Describe el estado físico actual de cada uno de los siguientes elementos")
     resultados_data.append({
         'medicion': "--- ESTADO FÍSICO ---", 
         'valor': "", 
@@ -979,8 +1053,17 @@ else:
         'conclusion': "", 
         'es_categoria': True
     })
-
-    elementos_fisicos = ["Cableado", "Conexiones", "Corrosión", "Caja de Diodos", "Quemaduras"]
+    placeholders = {
+    "Tablero": "Ej. Bien torqueado/ conectado, sucio, con humedad, etc.",
+    "Paneles": "Ej. En buen estado, rotos, sucios, etc.",
+    "ITM": "Ej. En buen estado, presencia de quemaduras, etc.",
+    "Cableado": "Ej. Correctamente conectado, etiquetado, coincide con el diagrama unifilar, etc.",
+    "Canalización": "Ej. Correctamente instalada, con presencia de corrosión, etc.",
+    "Inversores": "Ej. Bien conectado, en funcionamiento, desconectado, etc.",
+    "Estructura": "Ej. con presencia de corrosión, bien sujeta/torqueada, etc.",
+    "Monitoreo (DataLogger, ErgoMeter, Router)": "Ej. Bien ubicado, bien conectado, en funcionamiento, etc."
+    } 
+    elementos_fisicos = ["Tablero", "Paneles", "ITM", "Cableado", "Canalización", "Inversores", "Estructura", "Monitoreo (DataLogger, ErgoMeter, Router)"]
 
     col_h1, col_h2 = st.columns([1, 3])
     with col_h1:
@@ -990,13 +1073,17 @@ else:
 
     for idx, elem in enumerate(elementos_fisicos):
         c1, c2 = st.columns([1, 3])
-        
+    
         with c1:
             st.markdown(f"**{elem}**")
-            
+        
         with c2:
+        # Obtenemos el placeholder del diccionario (con un mensaje por defecto en caso de no encontrar la clave)
+            ph_texto = placeholders.get(elem, "Describe el estado físico del elemento")
+        
             desc_f = st.text_input(
                 f"Estado de {elem}", 
+                placeholder=ph_texto,
                 key=f"mono_fis_desc_{idx}", 
                 label_visibility="collapsed"
             )
@@ -1012,7 +1099,9 @@ else:
     st.divider()
 
 # 2. ESTADO ELÉCTRICO - Mediciones en Corriente Directa (CD)
-    st.markdown("#### ☀️ Mediciones en Corriente Directa (CD)")
+    st.markdown("#### 🔍 Estado Eléctrico")
+    st.markdown("##### ⚡ Mediciones en Corriente Directa (CD)")
+    st.info("Describe el estado físico actual de cada uno de los siguientes elementos")
     resultados_data.append({
         'medicion': "--- MEDICIONES EN CORRIENTE DIRECTA (CD) ---", 
         'valor': "", 
@@ -1026,116 +1115,63 @@ else:
         min_value=1, max_value=20, value=1, step=1, key="num_strings_mono"
     )
 
+   # ==========================================
+    # BLOQUE 1: VOLTAJE POR CADENA
     # ==========================================
-    # TABLA 1: VOLTAJE POR CADENA
-    # ==========================================
-    st.markdown("##### ⚡ Voltaje por Cadena")
-    
-    col_v1, col_v2, col_v3 = st.columns([1.5, 2.5, 2.5])
-    with col_v1:
-        st.markdown("**Voltaje por cadena (V)**")
-    with col_v2:
-        st.markdown("**Valor medido**")
-    with col_v3:
-        st.markdown("**# de paneles** *(Cad / Voc)*")
-
-    dict_voltajes = {}
-    dict_paneles = {}
-
+    st.markdown("##### ⚡ Voltaje por cadena")
     for s in range(num_strings):
-        c1, c2, c3 = st.columns([1.5, 2.5, 2.5])
-        
+        c1, c2 = st.columns([1, 3])
         with c1:
-            st.markdown(f"**Cad {s+1}**")
-            
+            st.markdown(f"**Cadena {s+1}**")
         with c2:
             val_v = st.text_input(
-                f"Voltaje Cad #{s+1}", 
-                placeholder="Ingrese valor medido", 
+                f"Voltaje Cadena {s+1}", 
+                placeholder="(valor obtenido en campo)", 
                 key=f"voc_val_{s}", 
                 label_visibility="collapsed"
             )
-            dict_voltajes[s] = val_v
-
-        with c3:
-            try:
-                val_v_float = float(val_v) if val_v and val_v.strip() != "" else 0.0
-                if voc_panel_float > 0 and val_v_float > 0:
-                    num_paneles_calc = round(val_v_float / voc_panel_float, 2)
-                    str_paneles = f"{num_paneles_calc}"
-                else:
-                    str_paneles = "Ingresar Voc"
-            except ValueError:
-                str_paneles = "Inválido"
-
-            st.text_input(
-                f"# Paneles Cad #{s+1}", 
-                value=str_paneles, 
-                disabled=True, 
-                key=f"paneles_calc_{s}", 
-                label_visibility="collapsed"
-            )
-            dict_paneles[s] = str_paneles
-
-    st.write("") # Espaciador entre tablas
-
-    # ==========================================
-    # TABLA 2: CORRIENTE POR CADENA
-    # ==========================================
-    st.markdown("##### 🔌 Corriente por Cadena")
-    
-    col_i1, col_i2, col_i3 = st.columns([1.5, 2.5, 2.5])
-    with col_i1:
-        st.markdown("**Corriente por cadena**")
-    with col_i2:
-        st.markdown("**Valor medido**")
-    with col_i3:
-        st.markdown("**Corriente máxima de operación**")
-
-    for s in range(num_strings):
-        c1, c2, c3 = st.columns([1.5, 2.5, 2.5])
-        
-        with c1:
-            st.markdown(f"**Cad {s+1}**")
             
+        resultados_data.append({
+            'medicion': f"Cadena #{s+1} - Voltaje (V)",
+            'valor': val_v if val_v else "-",
+            'criterio': "N/A",
+            'conclusion': "N/A",
+            'es_categoria': False
+        })
+
+    st.write("") # Espaciado entre tablas
+
+    # ==========================================
+    # BLOQUE 2: CORRIENTE POR CADENA
+    # ==========================================
+    st.markdown("##### ⚡ Corriente por cadena")
+    for s in range(num_strings):
+        c1, c2 = st.columns([1, 3])
+        with c1:
+            st.markdown(f"**Cadena {s+1}**")
         with c2:
             val_i = st.text_input(
-                f"Corriente Cad #{s+1}", 
-                placeholder="Ingrese valor medido", 
+                f"Corriente Cadena {s+1}", 
+                placeholder="(valor obtenido en campo)", 
                 key=f"icd_val_{s}", 
                 label_visibility="collapsed"
             )
 
-        with c3:
-            st.text_input(
-                f"Imax Cad #{s+1}", 
-                value=f"{imax_ref_val} A" if imax_ref_val != "N/A" else "N/A", 
-                disabled=True, 
-                key=f"imax_disp_{s}", 
-                label_visibility="collapsed"
-            )
-
-        # Registro en PDF
-        resultados_data.append({
-            'medicion': f"Cadena #{s+1} - Voltaje (V)",
-            'valor': dict_voltajes.get(s, "-"),
-            'criterio': f"# Paneles: {dict_paneles.get(s, 'N/A')}",
-            'conclusion': "N/A",
-            'es_categoria': False
-        })
-        
         resultados_data.append({
             'medicion': f"Cadena #{s+1} - Corriente (A)",
             'valor': val_i if val_i else "-",
-            'criterio': f"Imax Ref: {imax_ref_val} A",
+            'criterio': "N/A",
             'conclusion': "N/A",
             'es_categoria': False
         })
 
     st.divider()
 
-# 3. ESTADO ELÉCTRICO - CORRIENTE ALTERNA (CA)
-    st.markdown("#### ⚡ Estado Eléctrico - Corriente Alterna (CA)")
+
+# --- ESTADO ELÉCTRICO - CORRIENTE ALTERNA (CA) ---
+    st.markdown("##### ⚡ Mediciones en Corriente Alterna (CA)")
+
+    resultados_data = []
     resultados_data.append({
         'medicion': "--- ESTADO ELÉCTRICO (CA) ---", 
         'valor': "", 
@@ -1144,119 +1180,354 @@ else:
         'es_categoria': True
     })
 
-    # Función auxiliar para evaluar si el valor está en rango (☑ / ☒)
-    def evaluar_rango(val_str, ref_str):
-        if not val_str or val_str.strip() == "":
-            return "---"
+    # --- CAMPOS GLOBALES DE ENTRADA ---
+    col_v_sys, col_i_nom = st.columns(2)
+    with col_v_sys:
+        voltaje_sistema = st.selectbox(
+            "Voltaje del sistema (V):", 
+            options=[480, 440, 220, 127], 
+            index=0, 
+            key="v_sistema_ca"
+        )
+
+    with col_i_nom:
+        corriente_nominal_itm = st.number_input(
+            "Corriente nominal ITM (A):", 
+            min_value=0, value=500, step=10, key="i_nominal_itm_ca"
+        )
+
+    # 1. Selector de cantidad de inversores
+    num_inversores = st.number_input(
+        "Número de Inversores a evaluar:", 
+        min_value=1, max_value=15, value=1, step=1, key="num_inversores_ca"
+    )
+
+    # Función auxiliar para calcular desbalance según norma NEMA (%)
+    def calcular_desbalance_nema(valores):
+        """Calcula el % de desbalance de un grupo de 3 valores trifásicos."""
         try:
-            v_num = float(val_str.strip())
-            ref_clean = ref_str.strip()
-
-            if "<" in ref_clean:
-                limite = float(ref_clean.replace("<", "").strip())
-                return "☑" if v_num < limite else "☒"
-            elif ">" in ref_clean:
-                limite = float(ref_clean.replace(">", "").strip())
-                return "☑" if v_num > limite else "☒"
-            elif "-" in ref_clean:
-                partes = ref_clean.split("-")
-                min_v = float(partes[0].strip())
-                max_v = float(partes[1].strip())
-                return "☑" if min_v <= v_num <= max_v else "☒"
-            else:
-                r_num = float(ref_clean)
-                return "☑" if (r_num * 0.95) <= v_num <= (r_num * 1.05) else "☒"
+            nums = [float(v.strip()) for v in valores if v and v.strip() != ""]
+            if len(nums) < 3:
+                return None  # Requiere las 3 lecturas para calcular
+            
+            promedio = sum(nums) / len(nums)
+            if promedio == 0:
+                return 0.0
+                
+            desviacion_maxima = max(abs(x - promedio) for x in nums)
+            desbalance = (desviacion_maxima / promedio) * 100
+            return round(desbalance, 2)
         except ValueError:
-            return "⚠️"
+            return None
 
-    # Encabezados generales de la tabla
-    col_h1, col_h2, col_h3, col_h4 = st.columns([2.5, 2.5, 2.5, 1.5])
-    with col_h1:
-        st.markdown("**Medida**")
-    with col_h2:
-        st.markdown("**Valor obtenido (V)**")
-    with col_h3:
-        st.markdown("**Valor de referencia**")
-    with col_h4:
-        st.markdown("**¿En rango?**")
-
-    # Definición de mediciones estándar por equipo
-    mediciones_trifasicas = [
-        ("Voltaje línea 1 - línea 2", "210 - 230"),
-        ("Voltaje línea 2 - línea 3", "210 - 230"),
-        ("Voltaje línea 3 - línea 1", "210 - 230"),
-        ("Voltaje línea 1 - neutro", "120 - 130"),
-        ("Voltaje línea 2 - neutro", "120 - 130"),
-        ("Voltaje línea 3 - neutro", "120 - 130"),
-        ("Voltaje neutro - tierra", "< 5")
+    # Definición de mediciones y límites de tolerancia según imagen
+    mediciones_voltaje = [
+        ("Voltaje Linea 1 - Linea 2", "LL", "2%"),
+        ("Voltaje Linea 2 - Linea 3", "LL", "2%"),
+        ("Voltaje Linea 3 - Linea 1", "LL", "2%"),
+        ("Voltaje Linea 1 - Neutro",  "LN", "3%"),
+        ("Voltaje Linea 2 - Neutro",  "LN", "3%"),
+        ("Voltaje Linea 3 - Neutro",  "LN", "3%"),
+        ("Voltaje Neutro - Tierra",   "NT", "5% del voltaje del sistema")
     ]
 
-    secciones_ca = [
-        ("Inversor", "inv"),
-        ("Bloque de distribución", "bloq"),
-        ("Interruptor", "inter")
+    mediciones_corriente = [
+        ("Linea 1", "fase", "10%"),
+        ("Linea 2", "fase", "10%"),
+        ("Linea 3", "fase", "10%"),
+        ("Corriente de Neutro", "NT", "<= 20% de I_max"),
+        ("Corriente de Tierra", "NT", "< 1 A")
     ]
+
+    # 2. Construcción dinámica de la lista de secciones
+    secciones_ca = []
+    for i in range(num_inversores):
+        secciones_ca.append((f"Inversor {i+1}", f"inv_{i+1}"))
+
+    secciones_ca.append(("Bloque de distribución", "bloq"))
+    secciones_ca.append(("Interruptor", "inter"))
+
+
+    # --- BLOQUE 1: VOLTAJES (CA) ---
+    st.subheader("Voltajes")
 
     for titulo_sec, prefix in secciones_ca:
-        # Subencabezado estilo celda combinada
-        st.info(f"**{titulo_sec}**")
+        st.info(f"**{titulo_sec} - Voltajes**")
         
-        for idx, (med_name, ref_defecto) in enumerate(mediciones_trifasicas):
-            c1, c2, c3, c4 = st.columns([2.5, 2.5, 2.5, 1.5])
+        # 1. Encabezados de tabla de entrada
+        h1, h2, h3 = st.columns([4, 3, 3])
+        with h1: st.caption("**Voltajes**")
+        with h2: st.caption("**Valor medido (V)**")
+        with h3: st.caption("**Límite de tolerancia**")
+
+        # 2. Filas de captura
+        for idx, (med_name, grupo, tol_label) in enumerate(mediciones_voltaje):
+            c1, c2, c3 = st.columns([4, 3, 3])
             
-            # 1. Medida
             with c1:
                 st.markdown(f"**{med_name}**")
 
-            # 2. Valor obtenido (ingresado por el usuario)
             with c2:
-                val_obt = st.text_input(
+                st.text_input(
                     f"Valor {titulo_sec} - {med_name}", 
-                    placeholder="Valor medido", 
-                    key=f"{prefix}_val_{idx}", 
+                    placeholder="Ingresar V", 
+                    key=f"{prefix}_volt_val_{idx}", 
                     label_visibility="collapsed"
                 )
 
-            # 3. Valor de referencia
             with c3:
-                val_ref = st.text_input(
-                    f"Ref {titulo_sec} - {med_name}", 
-                    value=ref_defecto, 
-                    placeholder="Ej. 210 - 230", 
-                    key=f"{prefix}_ref_{idx}", 
-                    label_visibility="collapsed"
-                )
+                st.markdown(f"`{tol_label}`")
 
-            # 4. Evaluación automática de Rango (☑ / ☒)
-            estado_rango = evaluar_rango(val_obt, val_ref)
+        # 3. Procesamiento y evaluación de datos agrupados
+        vals_ingresados = [st.session_state.get(f"{prefix}_volt_val_{i}", "") for i in range(7)]
+        vals_ll = vals_ingresados[0:3]
+        vals_ln = vals_ingresados[3:6]
+        val_nt_raw = vals_ingresados[6]
 
-            with c4:
-                st.markdown(f"### {estado_rango}")
+        desbal_linea = calcular_desbalance_nema(vals_ll)
+        desbal_fase = calcular_desbalance_nema(vals_ln)
 
-            # Registro de datos para la exportación / PDF
+        # Evaluación: Desbalance de Línea (<= 3%)
+        if desbal_linea is not None:
+            txt_desbal_linea = f"{desbal_linea}%"
+            estado_linea = "☑" if desbal_linea <= 3.0 else "☒"
+        else:
+            txt_desbal_linea = "---"
+            estado_linea = "---"
+
+        # Evaluación: Desbalance de Fase (<= 2%)
+        if desbal_fase is not None:
+            txt_desbal_fase = f"{desbal_fase}%"
+            estado_fase = "☑" if desbal_fase <= 2.0 else "☒"
+        else:
+            txt_desbal_fase = "---"
+            estado_fase = "---"
+
+        # Evaluación: Neutro - Tierra (<= 5% del voltaje del sistema)
+        limite_nt_5pct = voltaje_sistema * 0.05
+        if val_nt_raw and val_nt_raw.strip() != "":
+            try:
+                val_nt_num = float(val_nt_raw.strip())
+                txt_nt = f"{val_nt_num} V"
+                estado_nt = "☑" if val_nt_num <= limite_nt_5pct else "☒"
+            except ValueError:
+                txt_nt = "Error"
+                estado_nt = "⚠️"
+        else:
+            txt_nt = "---"
+            estado_nt = "---"
+
+        # 4. Bloque final de la tabla: "¿En rango?"
+        st.markdown("---")
+        st.markdown("##### **¿En rango?**")
+        
+        # Desbalance de Voltaje de línea
+        r1_c1, r1_c2, r1_c3 = st.columns([4, 4, 2])
+        with r1_c1: st.markdown("**Desbalance de Voltaje de linea**")
+        with r1_c2: st.markdown(f"`{txt_desbal_linea}`")
+        with r1_c3: st.markdown(f"### {estado_linea}")
+
+        # Desbalance de voltaje de fases
+        r2_c1, r2_c2, r2_c3 = st.columns([4, 4, 2])
+        with r2_c1: st.markdown("**Desbalance de voltaje de fases**")
+        with r2_c2: st.markdown(f" `{txt_desbal_fase}`")
+        with r2_c3: st.markdown(f"### {estado_fase}")
+
+        # Neutro - Tierra
+        r3_c1, r3_c2, r3_c3 = st.columns([4, 4, 2])
+        with r3_c1: st.markdown("**Neutro - Tierra**")
+        with r3_c2: st.markdown(f"Límite 5%: `{limite_nt_5pct:.2f} V`")
+        with r3_c3: st.markdown(f"### {estado_nt}")
+
+        # Guardar resumen en el reporte de salida
+        for idx, (med_name, _, tol_label) in enumerate(mediciones_voltaje):
+            v_val = st.session_state.get(f"{prefix}_volt_val_{idx}", "")
             resultados_data.append({
                 'medicion': f"{titulo_sec} - {med_name}",
-                'valor': f"{val_obt} V" if val_obt else "-",
-                'criterio': val_ref,
-                'conclusion': "En Rango (☑)" if estado_rango == "☑" else ("Fuera de Rango (☒)" if estado_rango == "☒" else "N/A"),
+                'valor': f"{v_val} V" if v_val else "-",
+                'criterio': tol_label,
+                'conclusion': "Registrado",
+                'es_categoria': False
+            })
+
+        resultados_data.append({
+            'medicion': f"{titulo_sec} - Desbalance Voltaje de Línea",
+            'valor': txt_desbal_linea,
+            'criterio': "≤ 3%",
+            'conclusion': estado_linea,
+            'es_categoria': False
+        })
+        resultados_data.append({
+            'medicion': f"{titulo_sec} - Desbalance Voltaje de Fases",
+            'valor': txt_desbal_fase,
+            'criterio': "≤ 2%",
+            'conclusion': estado_fase,
+            'es_categoria': False
+        })
+        resultados_data.append({
+            'medicion': f"{titulo_sec} - Neutro - Tierra",
+            'valor': txt_nt,
+            'criterio': f"≤ 5% ({limite_nt_5pct:.2f} V)",
+            'conclusion': estado_nt,
+            'es_categoria': False
+        })
+
+    st.divider()
+
+    # --- BLOQUE 2: CORRIENTES (CA) ---
+    st.subheader("Corrientes")
+
+    for titulo_sec, prefix in secciones_ca:
+            st.info(f"**{titulo_sec} - Corrientes**")
+            
+            # 1. Encabezados de tabla de entrada
+            h1, h2, h3 = st.columns([4, 3, 3])
+            with h1: st.caption("**Corrientes**")
+            with h2: st.caption("**Valor Medido (A)**")
+            with h3: st.caption("**Límite de tolerancia**")
+
+            # 2. Filas de captura de lecturas
+            for idx, (med_name, _, tol_label) in enumerate(mediciones_corriente):
+                c1, c2, c3 = st.columns([4, 3, 3])
+                
+                with c1:
+                    st.markdown(f"**{med_name}**")
+
+                with c2:
+                    st.text_input(
+                        f"Valor {titulo_sec} - {med_name}", 
+                        placeholder="Ingresar A", 
+                        key=f"{prefix}_curr_val_{idx}", 
+                        label_visibility="collapsed"
+                    )
+
+                with c3:
+                    st.markdown(f"`{tol_label}`")
+
+            # 3. Lectura y procesamiento de valores de la sección
+            vals_curr_raw = [st.session_state.get(f"{prefix}_curr_val_{i}", "") for i in range(5)]
+            vals_fases = vals_curr_raw[0:3]
+            val_neutro_raw = vals_curr_raw[3]
+            val_tierra_raw = vals_curr_raw[4]
+
+            # Convertir a números para cálculo
+            nums_fases = []
+            for v in vals_fases:
+                try:
+                    nums_fases.append(float(v.strip()) if v and v.strip() != "" else None)
+                except ValueError:
+                    nums_fases.append(None)
+
+            # A) Evaluación Desbalance de Corriente L1-L2-L3 (<= 10%)
+            desbal_corriente = calcular_desbalance_nema(vals_fases)
+            if desbal_corriente is not None:
+                txt_desbalance_curr = f"{desbal_corriente}%"
+                estado_desbal_curr = "☑" if desbal_corriente <= 10.0 else "☒"
+            else:
+                txt_desbalance_curr = "---"
+                estado_desbal_curr = "---"
+
+            # B) Evaluación Corriente de Neutro (<= 20% del valor máximo de fase)
+            fases_validas = [f for f in nums_fases if f is not None]
+            i_max_fase = max(fases_validas) if fases_validas else 0.0
+            limite_neutro = i_max_fase * 0.20
+
+            if val_neutro_raw and val_neutro_raw.strip() != "":
+                try:
+                    i_neutro = float(val_neutro_raw.strip())
+                    txt_neutro = f"{i_neutro} A"
+                    # Si no hay corriente en fases, valida que no exceda 0A directamente
+                    estado_neutro = "☑" if i_neutro <= limite_neutro else "☒"
+                except ValueError:
+                    txt_neutro = "Error"
+                    estado_neutro = "⚠️"
+            else:
+                txt_neutro = "---"
+                estado_neutro = "---"
+
+            # C) Evaluación Corriente de Tierra (< 1.0 A)
+            if val_tierra_raw and val_tierra_raw.strip() != "":
+                try:
+                    i_tierra = float(val_tierra_raw.strip())
+                    txt_tierra = f"{i_tierra} A"
+                    estado_tierra = "☑" if i_tierra < 1.0 else "☒"
+                except ValueError:
+                    txt_tierra = "Error"
+                    estado_tierra = "⚠️"
+            else:
+                txt_tierra = "---"
+                estado_tierra = "---"
+
+            # 4. Bloque final de la tabla: "¿En rango?"
+            st.markdown("---")
+            st.markdown("##### **¿En rango?**")
+
+            # Desbalance de Corrientes
+            r1_c1, r1_c2, r1_c3 = st.columns([4, 4, 2])
+            with r1_c1: st.markdown("**Desbalance de Corrientes (L1, L2, L3)**")
+            with r1_c2: st.markdown(f" `{txt_desbalance_curr}`")
+            with r1_c3: st.markdown(f"### {estado_desbal_curr}")
+
+            # Corriente de Neutro
+            r2_c1, r2_c2, r2_c3 = st.columns([4, 4, 2])
+            with r2_c1: st.markdown("**Corriente de Neutro**")
+            with r2_c2: st.markdown(f"`{txt_neutro}`")
+            with r2_c3: st.markdown(f"### {estado_neutro}")
+
+            # Corriente de Tierra
+            r3_c1, r3_c2, r3_c3 = st.columns([4, 4, 2])
+            with r3_c1: st.markdown("**Corriente de Tierra**")
+            with r3_c2: st.markdown(f"`{txt_tierra}`")
+            with r3_c3: st.markdown(f"### {estado_tierra}")
+
+            # Guardar en reporte final
+            for idx, (med_name, _, tol_label) in enumerate(mediciones_corriente):
+                curr_val = st.session_state.get(f"{prefix}_curr_val_{idx}", "")
+                resultados_data.append({
+                    'medicion': f"{titulo_sec} - {med_name}",
+                    'valor': f"{curr_val} A" if curr_val else "-",
+                    'criterio': tol_label,
+                    'conclusion': "Registrado",
+                    'es_categoria': False
+                })
+
+            resultados_data.append({
+                'medicion': f"{titulo_sec} - Desbalance Corrientes",
+                'valor': txt_desbalance_curr,
+                'criterio': "≤ 10%",
+                'conclusion': estado_desbal_curr,
+                'es_categoria': False
+            })
+            resultados_data.append({
+                'medicion': f"{titulo_sec} - Corriente de Neutro",
+                'valor': txt_neutro,
+                'criterio': f"≤ 20% I_máx ({limite_neutro:.2f} A)",
+                'conclusion': estado_neutro,
+                'es_categoria': False
+            })
+            resultados_data.append({
+                'medicion': f"{titulo_sec} - Corriente de Tierra",
+                'valor': txt_tierra,
+                'criterio': "< 1.0 A",
+                'conclusion': estado_tierra,
                 'es_categoria': False
             })
 
     st.divider()
+
 
 # 4. PRUEBAS DE AISLAMIENTO Y TIERRA
     st.markdown("#### 🔒 Pruebas de Aislamiento y Fallo a Tierra")
     resultados_data.append({
         'medicion': "--- PRUEBAS DE AISLAMIENTO Y TIERRA ---", 
         'valor': "", 
-        'criterio': "", 
-        'conclusion': "", 
+        'criterio': "",             'conclusion': "", 
         'es_categoria': True
-    })
+        })
 
     # Pregunta sobre el tipo de canalización
     canalizacion = st.multiselect(
-        "Características de la canalización (Selecciona si aplica):",
+            "Características de la canalización (Selecciona si aplica):",
         ["Subterránea", "Aérea", "Mide más de 30m"],
         key="tipo_canalizacion"
     )
