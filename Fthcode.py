@@ -666,24 +666,32 @@ if tipo_sistema == "Monofásico":
             "Voltaje del sistema (V):", 
             options=[480, 440, 220, 127], 
             index=0, 
-        key="v_sistema_ca"
-        )
-    with col_i_nom:
-        corriente_nominal = st.number_input(
-            "Corriente nominal del ITM (A):", 
-            min_value=0, value=500, step=10, key="i_nominal_ca"
+            key="v_sistema_ca"
         )
 
-    # 1. Selector de número de inversores (Contador)
-    num_inversores = st.number_input(
-        "Número de Inversores a evaluar:", 
-        min_value=1, max_value=10, value=1, step=1, key="num_inversores_ca"
-    )
+    with col_i_nom:
+        corriente_nominal_itm = st.number_input(
+            "Corriente nominal ITM (A):", 
+            min_value=0, value=500, step=10, key="corriente_nominal"
+        )
+
+    # 1. Selectores de cantidad de inversores e ITMs
+    col_cnt1, col_cnt2 = st.columns(2)
+    with col_cnt1:
+        num_inversores = st.number_input(
+            "Número de Inversores a evaluar:", 
+            min_value=1, max_value=50, value=1, step=1, key="num_inversores_ca"
+        )
+    with col_cnt2:
+        num_itm = st.number_input(
+            "Número de ITM a evaluar:", 
+            min_value=1, max_value=15, value=1, step=1, key="num_itm_ca"
+        )
 
     # Definición de mediciones de voltaje según la tabla
     mediciones_voltaje = [
         ("Voltaje Línea - Neutro", "LN", "±10%"),
-        ("Voltaje Línea Tierra", "LT", "±10%"),
+        ("Voltaje Línea - Tierra", "LT", "±10%"),
         ("Voltaje Neutro - Tierra", "NT", "2V")
     ]
 
@@ -693,14 +701,15 @@ if tipo_sistema == "Monofásico":
         ("Corriente de Tierra", "TIERRA", "3mA")
     ]
 
-    # 2. Generación dinámica de secciones (Inversores dinámicos + Secciones fijas)
+    # 2. Generación dinámica de secciones (Inversores dinámicos + ITMs dinámicos + Secciones fijas)
     secciones_ca = []
-    for i in range(num_inversores):
+    for i in range(int(num_inversores)):
         secciones_ca.append((f"Inversor {i+1}", f"inv_{i+1}"))
+    
+    for i in range(int(num_itm)):
+        secciones_ca.append((f"ITM {i+1}", f"itm_{i+1}"))
 
     secciones_ca.append(("Bloque de distribución", "bloq"))
-    secciones_ca.append(("Interruptor", "inter"))
-
 
     # --- BLOQUE 1: VOLTAJES (CA) ---
     st.subheader("Voltajes")
@@ -771,7 +780,8 @@ if tipo_sistema == "Monofásico":
             })
 
     st.divider()
-# --- BLOQUE 2: CORRIENTES (CA) ---
+    
+    # --- BLOQUE 2: CORRIENTES (CA) ---
     st.subheader("Corrientes")
     for titulo_sec, prefix in secciones_ca:
             st.info(f"**{titulo_sec} - Corrientes**")
@@ -811,7 +821,7 @@ if tipo_sistema == "Monofásico":
 
                         # 1. Corriente de Línea: Menor o igual al 80% de la capacidad nominal del ITM
                         if tipo_med == "LINEA":
-                            limite_itm_80 = corriente_nominal * 0.80
+                            limite_itm_80 = corriente_nominal_itm * 0.80
                             if val_num <= limite_itm_80:
                                 estado_rango = "☑"
                             else:
@@ -854,188 +864,6 @@ if tipo_sistema == "Monofásico":
                 })
 
     st.divider()
-
-# 4. PRUEBAS DE AISLAMIENTO Y TIERRA
-    st.markdown("#### 🔒 Pruebas de Aislamiento y Fallo a Tierra")
-    resultados_data.append({
-        'medicion': "--- PRUEBAS DE AISLAMIENTO Y TIERRA ---", 
-        'valor': "", 
-        'criterio': "", 
-        'conclusion': "", 
-        'es_categoria': True
-    })
-
-    # Pregunta sobre el tipo de canalización
-    canalizacion = st.multiselect(
-        "Características de la canalización (Selecciona si aplica):",
-        ["Subterránea", "Aérea", "Mide más de 30m"],
-        key="tipo_canalizacion"
-    )
-
-    # Encabezados de la tabla
-    col_a1, col_a2, col_a3, col_a4 = st.columns([2.5, 2.5, 2.5, 1.5])
-    with col_a1:
-        st.markdown("**Medición**")
-    with col_a2:
-        st.markdown("**Valor de campo**")
-    with col_a3:
-        st.markdown("**Valor de referencia**")
-    with col_a4:
-        st.markdown("**¿En rango?**")
-
-    # Lista base de mediciones: (Nombre, Referencia por defecto)
-    mediciones_aislamiento = [
-        ("Voltaje de fallo a tierra", "< 5"),
-        ("Continuidad a tierra", "< 1")
-    ]
-
-    # Si se cumple alguna de las 3 condiciones de canalización, agregamos "Resistencia de aislamiento"
-    if len(canalizacion) > 0:
-        mediciones_aislamiento.append(("Resistencia de aislamiento", "> 5"))
-
-    for idx, (med_name, ref_defecto) in enumerate(mediciones_aislamiento):
-        c1, c2, c3, c4 = st.columns([2.5, 2.5, 2.5, 1.5])
-        
-        # 1. Nombre de la Medición
-        with c1:
-            st.markdown(f"**{med_name}**")
-
-        # 2. Valor de Campo
-        with c2:
-            val_obt = st.text_input(
-                f"Valor {med_name}", 
-                placeholder="Valor medido", 
-                key=f"ais_val_{idx}", 
-                label_visibility="collapsed"
-            )
-
-        # 3. Valor de Referencia
-        with c3:
-            val_ref = st.text_input(
-                f"Ref {med_name}", 
-                value=ref_defecto, 
-                placeholder="Ej. < 5 o > 5", 
-                key=f"ais_crit_{idx}", 
-                label_visibility="collapsed"
-            )
-
-        # 4. Evaluación automática del Rango (☑ / ☒)
-        estado_rango = "---"
-        
-        if val_obt and val_obt.strip() != "":
-            try:
-                v_num = float(val_obt.strip())
-                ref_clean = val_ref.strip()
-
-                if "<" in ref_clean:
-                    limite = float(ref_clean.replace("<", "").strip())
-                    estado_rango = "☑" if v_num < limite else "☒"
-                elif ">" in ref_clean:
-                    limite = float(ref_clean.replace(">", "").strip())
-                    estado_rango = "☑" if v_num > limite else "☒"
-                elif "-" in ref_clean:
-                    partes = ref_clean.split("-")
-                    min_v = float(partes[0].strip())
-                    max_v = float(partes[1].strip())
-                    estado_rango = "☑" if min_v <= v_num <= max_v else "☒"
-                else:
-                    # Tolerancia +- 5% para valores fijos
-                    r_num = float(ref_clean)
-                    estado_rango = "☑" if (r_num * 0.95) <= v_num <= (r_num * 1.05) else "☒"
-            except ValueError:
-                estado_rango = "⚠️"
-
-        with c4:
-            st.markdown(f"### {estado_rango}")
-
-        # Guardar en la estructura del PDF
-        resultados_data.append({
-            'medicion': med_name,
-            'valor': val_obt if val_obt else "-",
-            'criterio': val_ref,
-            'conclusion': "En Rango (☑)" if estado_rango == "☑" else ("Fuera de Rango (☒)" if estado_rango == "☒" else "N/A"),
-            'es_categoria': False
-        })
-
-    st.divider()
-
-# 5. TERMOGRAFÍA
-    st.markdown("#### 🌡️ Análisis Termográfico")
-    resultados_data.append({
-        'medicion': "--- PRUEBA DE TERMOGRAFÍA ---", 
-        'valor': "", 
-        'criterio': "", 
-        'conclusion': "", 
-        'es_categoria': True
-    })
-
-    # Encabezados de la tabla
-    col_t1, col_t2, col_t3, col_t4 = st.columns([2, 2.5, 2.5, 3])
-    with col_t1:
-        st.markdown("**Equipo**")
-    with col_t2:
-        st.markdown("**Temperatura (°C)**")
-    with col_t3:
-        st.markdown("**Rango de Operación**")
-    with col_t4:
-        st.markdown("**Evidencia Fotográfica**")
-
-    # Lista de equipos con su rango de operación sugerido por defecto
-    elementos_termografia = [
-        ("Paneles", "25 - 65 °C"),
-        ("ITM", "< 60 °C"),
-        ("Inversores", "25 - 60 °C"),
-        ("Bloques de distribución", "< 60 °C")
-    ]
-
-    # Diccionario opcional para almacenar imágenes capturadas si lo requieres luego en el PDF
-    fotos_termografia = {}
-
-    for idx, (elem_name, rango_defecto) in enumerate(elementos_termografia):
-        c1, c2, c3, c4 = st.columns([2, 2.5, 2.5, 3])
-        
-        # 1. Equipo
-        with c1:
-            st.markdown(f"**{elem_name}**")
-
-        # 2. Temperatura (Ingreso del usuario)
-        with c2:
-            temp_val = st.text_input(
-                f"Temp {elem_name}", 
-                placeholder="Ej. 45 °C", 
-                key=f"termo_val_{idx}", 
-                label_visibility="collapsed"
-            )
-
-        # 3. Rango de Operación
-        with c3:
-            rango_val = st.text_input(
-                f"Rango {elem_name}", 
-                value=rango_defecto, 
-                placeholder="Ej. 25 - 65 °C", 
-                key=f"termo_crit_{idx}", 
-                label_visibility="collapsed"
-            )
-
-        # 4. Evidencia (Subir foto)
-        with c4:
-            foto_evidencia = st.file_uploader(
-                f"Foto {elem_name}", 
-                type=["jpg", "jpeg", "png"], 
-                key=f"termo_foto_{idx}", 
-                label_visibility="collapsed"
-            )
-            if foto_evidencia is not None:
-                fotos_termografia[elem_name] = foto_evidencia
-
-        # Guardar registros de texto para la estructura final / PDF
-        resultados_data.append({
-            'medicion': f"Termografía - {elem_name}",
-            'valor': temp_val if temp_val else "-",
-            'criterio': rango_val,
-            'conclusion': "Foto adjunta" if foto_evidencia else "Sin foto",
-            'es_categoria': False
-        })
 
 else:
     # ==========================================
@@ -1100,8 +928,7 @@ else:
 
 # 2. ESTADO ELÉCTRICO - Mediciones en Corriente Directa (CD)
     st.markdown("#### 🔍 Estado Eléctrico")
-    st.markdown("##### ⚡ Mediciones en Corriente Directa (CD)")
-    st.info("Describe el estado físico actual de cada uno de los siguientes elementos")
+    st.markdown("##### ☀️ Mediciones en Corriente Directa (DC)")
     resultados_data.append({
         'medicion': "--- MEDICIONES EN CORRIENTE DIRECTA (CD) ---", 
         'valor': "", 
@@ -1167,9 +994,8 @@ else:
 
     st.divider()
 
-
-# --- ESTADO ELÉCTRICO - CORRIENTE ALTERNA (CA) ---
-    st.markdown("##### ⚡ Mediciones en Corriente Alterna (CA)")
+# --- ESTADO ELÉCTRICO - CORRIENTE ALTERNA (AC) ---
+    st.markdown("##### ⚡ Mediciones en Corriente Alterna (AC)")
 
     resultados_data = []
     resultados_data.append({
@@ -1196,11 +1022,18 @@ else:
             min_value=0, value=500, step=10, key="i_nominal_itm_ca"
         )
 
-    # 1. Selector de cantidad de inversores
-    num_inversores = st.number_input(
-        "Número de Inversores a evaluar:", 
-        min_value=1, max_value=15, value=1, step=1, key="num_inversores_ca"
-    )
+    # 1. Selectores de cantidad de inversores e ITMs
+    col_cnt1, col_cnt2 = st.columns(2)
+    with col_cnt1:
+        num_inversores = st.number_input(
+            "Número de Inversores a evaluar:", 
+            min_value=1, max_value=50, value=1, step=1, key="num_inversores_ca"
+        )
+    with col_cnt2:
+        num_itm = st.number_input(
+            "Número de ITM a evaluar:", 
+            min_value=1, max_value=15, value=1, step=1, key="num_itm_ca"
+        )
 
     # Función auxiliar para calcular desbalance según norma NEMA (%)
     def calcular_desbalance_nema(valores):
@@ -1239,10 +1072,12 @@ else:
         ("Corriente de Tierra", "NT", "< 1 A")
     ]
 
-    # 2. Construcción dinámica de la lista de secciones
+    # 2. Construcción dinámica de la lista de secciones corrigiendo los contadores
     secciones_ca = []
-    for i in range(num_inversores):
+    for i in range(int(num_inversores)):
         secciones_ca.append((f"Inversor {i+1}", f"inv_{i+1}"))
+    for i in range(int(num_itm)):
+        secciones_ca.append((f"ITM {i+1}", f"itm_{i+1}"))
 
     secciones_ca.append(("Bloque de distribución", "bloq"))
     secciones_ca.append(("Interruptor", "inter"))
@@ -1304,7 +1139,7 @@ else:
             estado_fase = "---"
 
         # Evaluación: Neutro - Tierra (<= 5% del voltaje del sistema)
-        limite_nt_5pct = voltaje_sistema * 0.05
+        limite_nt_5pct = float(voltaje_sistema) * 0.05
         if val_nt_raw and val_nt_raw.strip() != "":
             try:
                 val_nt_num = float(val_nt_raw.strip())
@@ -1378,324 +1213,338 @@ else:
     st.subheader("Corrientes")
 
     for titulo_sec, prefix in secciones_ca:
-            st.info(f"**{titulo_sec} - Corrientes**")
+        st.info(f"**{titulo_sec} - Corrientes**")
+        
+        # 1. Encabezados de tabla de entrada
+        h1, h2, h3 = st.columns([4, 3, 3])
+        with h1: st.caption("**Corrientes**")
+        with h2: st.caption("**Valor Medido (A)**")
+        with h3: st.caption("**Límite de tolerancia**")
+
+        # 2. Filas de captura de lecturas
+        for idx, (med_name, _, tol_label) in enumerate(mediciones_corriente):
+            c1, c2, c3 = st.columns([4, 3, 3])
             
-            # 1. Encabezados de tabla de entrada
-            h1, h2, h3 = st.columns([4, 3, 3])
-            with h1: st.caption("**Corrientes**")
-            with h2: st.caption("**Valor Medido (A)**")
-            with h3: st.caption("**Límite de tolerancia**")
+            with c1:
+                st.markdown(f"**{med_name}**")
 
-            # 2. Filas de captura de lecturas
-            for idx, (med_name, _, tol_label) in enumerate(mediciones_corriente):
-                c1, c2, c3 = st.columns([4, 3, 3])
-                
-                with c1:
-                    st.markdown(f"**{med_name}**")
+            with c2:
+                st.text_input(
+                    f"Valor {titulo_sec} - {med_name}", 
+                    placeholder="Ingresar A", 
+                    key=f"{prefix}_curr_val_{idx}", 
+                    label_visibility="collapsed"
+                )
 
-                with c2:
-                    st.text_input(
-                        f"Valor {titulo_sec} - {med_name}", 
-                        placeholder="Ingresar A", 
-                        key=f"{prefix}_curr_val_{idx}", 
-                        label_visibility="collapsed"
-                    )
+            with c3:
+                st.markdown(f"`{tol_label}`")
 
-                with c3:
-                    st.markdown(f"`{tol_label}`")
+        # 3. Lectura y procesamiento de valores de la sección
+        vals_curr_raw = [st.session_state.get(f"{prefix}_curr_val_{i}", "") for i in range(5)]
+        vals_fases = vals_curr_raw[0:3]
+        val_neutro_raw = vals_curr_raw[3]
+        val_tierra_raw = vals_curr_raw[4]
 
-            # 3. Lectura y procesamiento de valores de la sección
-            vals_curr_raw = [st.session_state.get(f"{prefix}_curr_val_{i}", "") for i in range(5)]
-            vals_fases = vals_curr_raw[0:3]
-            val_neutro_raw = vals_curr_raw[3]
-            val_tierra_raw = vals_curr_raw[4]
+        # Convertir a números para cálculo
+        nums_fases = []
+        for v in vals_fases:
+            try:
+                nums_fases.append(float(v.strip()) if v and v.strip() != "" else None)
+            except ValueError:
+                nums_fases.append(None)
 
-            # Convertir a números para cálculo
-            nums_fases = []
-            for v in vals_fases:
-                try:
-                    nums_fases.append(float(v.strip()) if v and v.strip() != "" else None)
-                except ValueError:
-                    nums_fases.append(None)
+        # A) Evaluación Desbalance de Corriente L1-L2-L3 (<= 10%)
+        desbal_corriente = calcular_desbalance_nema(vals_fases)
+        if desbal_corriente is not None:
+            txt_desbalance_curr = f"{desbal_corriente}%"
+            estado_desbal_curr = "☑" if desbal_corriente <= 10.0 else "☒"
+        else:
+            txt_desbalance_curr = "---"
+            estado_desbal_curr = "---"
 
-            # A) Evaluación Desbalance de Corriente L1-L2-L3 (<= 10%)
-            desbal_corriente = calcular_desbalance_nema(vals_fases)
-            if desbal_corriente is not None:
-                txt_desbalance_curr = f"{desbal_corriente}%"
-                estado_desbal_curr = "☑" if desbal_corriente <= 10.0 else "☒"
-            else:
-                txt_desbalance_curr = "---"
-                estado_desbal_curr = "---"
+        # B) Evaluación Corriente de Neutro (<= 20% del valor máximo de fase)
+        fases_validas = [f for f in nums_fases if f is not None]
+        i_max_fase = max(fases_validas) if fases_validas else 0.0
+        limite_neutro = i_max_fase * 0.20
 
-            # B) Evaluación Corriente de Neutro (<= 20% del valor máximo de fase)
-            fases_validas = [f for f in nums_fases if f is not None]
-            i_max_fase = max(fases_validas) if fases_validas else 0.0
-            limite_neutro = i_max_fase * 0.20
+        if val_neutro_raw and val_neutro_raw.strip() != "":
+            try:
+                i_neutro = float(val_neutro_raw.strip())
+                txt_neutro = f"{i_neutro} A"
+                estado_neutro = "☑" if i_neutro <= limite_neutro else "☒"
+            except ValueError:
+                txt_neutro = "Error"
+                estado_neutro = "⚠️"
+        else:
+            txt_neutro = "---"
+            estado_neutro = "---"
 
-            if val_neutro_raw and val_neutro_raw.strip() != "":
-                try:
-                    i_neutro = float(val_neutro_raw.strip())
-                    txt_neutro = f"{i_neutro} A"
-                    # Si no hay corriente en fases, valida que no exceda 0A directamente
-                    estado_neutro = "☑" if i_neutro <= limite_neutro else "☒"
-                except ValueError:
-                    txt_neutro = "Error"
-                    estado_neutro = "⚠️"
-            else:
-                txt_neutro = "---"
-                estado_neutro = "---"
+        # C) Evaluación Corriente de Tierra (< 1.0 A)
+        if val_tierra_raw and val_tierra_raw.strip() != "":
+            try:
+                i_tierra = float(val_tierra_raw.strip())
+                txt_tierra = f"{i_tierra} A"
+                estado_tierra = "☑" if i_tierra < 1.0 else "☒"
+            except ValueError:
+                txt_tierra = "Error"
+                estado_tierra = "⚠️"
+        else:
+            txt_tierra = "---"
+            estado_tierra = "---"
 
-            # C) Evaluación Corriente de Tierra (< 1.0 A)
-            if val_tierra_raw and val_tierra_raw.strip() != "":
-                try:
-                    i_tierra = float(val_tierra_raw.strip())
-                    txt_tierra = f"{i_tierra} A"
-                    estado_tierra = "☑" if i_tierra < 1.0 else "☒"
-                except ValueError:
-                    txt_tierra = "Error"
-                    estado_tierra = "⚠️"
-            else:
-                txt_tierra = "---"
-                estado_tierra = "---"
+        # 4. Bloque final de la tabla: "¿En rango?"
+        st.markdown("---")
+        st.markdown("##### **¿En rango?**")
 
-            # 4. Bloque final de la tabla: "¿En rango?"
-            st.markdown("---")
-            st.markdown("##### **¿En rango?**")
+        # Desbalance de Corrientes
+        r1_c1, r1_c2, r1_c3 = st.columns([4, 4, 2])
+        with r1_c1: st.markdown("**Desbalance de Corrientes (L1, L2, L3)**")
+        with r1_c2: st.markdown(f" `{txt_desbalance_curr}`")
+        with r1_c3: st.markdown(f"### {estado_desbal_curr}")
 
-            # Desbalance de Corrientes
-            r1_c1, r1_c2, r1_c3 = st.columns([4, 4, 2])
-            with r1_c1: st.markdown("**Desbalance de Corrientes (L1, L2, L3)**")
-            with r1_c2: st.markdown(f" `{txt_desbalance_curr}`")
-            with r1_c3: st.markdown(f"### {estado_desbal_curr}")
+        # Corriente de Neutro
+        r2_c1, r2_c2, r2_c3 = st.columns([4, 4, 2])
+        with r2_c1: st.markdown("**Corriente de Neutro**")
+        with r2_c2: st.markdown(f"`{txt_neutro}`")
+        with r2_c3: st.markdown(f"### {estado_neutro}")
 
-            # Corriente de Neutro
-            r2_c1, r2_c2, r2_c3 = st.columns([4, 4, 2])
-            with r2_c1: st.markdown("**Corriente de Neutro**")
-            with r2_c2: st.markdown(f"`{txt_neutro}`")
-            with r2_c3: st.markdown(f"### {estado_neutro}")
+        # Corriente de Tierra
+        r3_c1, r3_c2, r3_c3 = st.columns([4, 4, 2])
+        with r3_c1: st.markdown("**Corriente de Tierra**")
+        with r3_c2: st.markdown(f"`{txt_tierra}`")
+        with r3_c3: st.markdown(f"### {estado_tierra}")
 
-            # Corriente de Tierra
-            r3_c1, r3_c2, r3_c3 = st.columns([4, 4, 2])
-            with r3_c1: st.markdown("**Corriente de Tierra**")
-            with r3_c2: st.markdown(f"`{txt_tierra}`")
-            with r3_c3: st.markdown(f"### {estado_tierra}")
-
-            # Guardar en reporte final
-            for idx, (med_name, _, tol_label) in enumerate(mediciones_corriente):
-                curr_val = st.session_state.get(f"{prefix}_curr_val_{idx}", "")
-                resultados_data.append({
-                    'medicion': f"{titulo_sec} - {med_name}",
-                    'valor': f"{curr_val} A" if curr_val else "-",
-                    'criterio': tol_label,
-                    'conclusion': "Registrado",
-                    'es_categoria': False
-                })
-
+        # Guardar en reporte final
+        for idx, (med_name, _, tol_label) in enumerate(mediciones_corriente):
+            curr_val = st.session_state.get(f"{prefix}_curr_val_{idx}", "")
             resultados_data.append({
-                'medicion': f"{titulo_sec} - Desbalance Corrientes",
-                'valor': txt_desbalance_curr,
-                'criterio': "≤ 10%",
-                'conclusion': estado_desbal_curr,
+                'medicion': f"{titulo_sec} - {med_name}",
+                'valor': f"{curr_val} A" if curr_val else "-",
+                'criterio': tol_label,
+                'conclusion': "Registrado",
                 'es_categoria': False
             })
-            resultados_data.append({
-                'medicion': f"{titulo_sec} - Corriente de Neutro",
-                'valor': txt_neutro,
-                'criterio': f"≤ 20% I_máx ({limite_neutro:.2f} A)",
-                'conclusion': estado_neutro,
-                'es_categoria': False
-            })
-            resultados_data.append({
-                'medicion': f"{titulo_sec} - Corriente de Tierra",
-                'valor': txt_tierra,
-                'criterio': "< 1.0 A",
-                'conclusion': estado_tierra,
-                'es_categoria': False
-            })
+
+        resultados_data.append({
+            'medicion': f"{titulo_sec} - Desbalance Corrientes",
+            'valor': txt_desbalance_curr,
+            'criterio': "≤ 10%",
+            'conclusion': estado_desbal_curr,
+            'es_categoria': False
+        })
+        resultados_data.append({
+            'medicion': f"{titulo_sec} - Corriente de Neutro",
+            'valor': txt_neutro,
+            'criterio': f"≤ 20% I_máx ({limite_neutro:.2f} A)",
+            'conclusion': estado_neutro,
+            'es_categoria': False
+        })
+        resultados_data.append({
+            'medicion': f"{titulo_sec} - Corriente de Tierra",
+            'valor': txt_tierra,
+            'criterio': "< 1.0 A",
+            'conclusion': estado_tierra,
+            'es_categoria': False
+        })
 
     st.divider()
 
 
-# 4. PRUEBAS DE AISLAMIENTO Y TIERRA
-    st.markdown("#### 🔒 Pruebas de Aislamiento y Fallo a Tierra")
-    resultados_data.append({
-        'medicion': "--- PRUEBAS DE AISLAMIENTO Y TIERRA ---", 
-        'valor': "", 
-        'criterio': "",             'conclusion': "", 
-        'es_categoria': True
-        })
+# 6. PRUEBAS DE AISLAMIENTO Y TIERRA
+st.markdown("#### 🔒 Pruebas de Aislamiento y Fallo a Tierra")
+resultados_data.append({
+    'medicion': "--- PRUEBAS DE AISLAMIENTO Y TIERRA ---", 
+    'valor': "", 
+    'criterio': "", 
+    'conclusion': "", 
+    'es_categoria': True 
+})
 
-    # Pregunta sobre el tipo de canalización
-    canalizacion = st.multiselect(
-            "Características de la canalización (Selecciona si aplica):",
-        ["Subterránea", "Aérea", "Mide más de 30m"],
-        key="tipo_canalizacion"
-    )
+# Pregunta sobre el tipo de canalización (Mantiene su estructura y función original intacta)
+canalizacion = st.multiselect(
+    "Características de la canalización (Selecciona si aplica):",
+    ["Subterránea", "Aérea", "Mide más de 30m"],
+    key="tipo_canalizacion"
+)
 
-    # Encabezados de la tabla
-    col_a1, col_a2, col_a3, col_a4 = st.columns([2.5, 2.5, 2.5, 1.5])
-    with col_a1:
-        st.markdown("**Medición**")
-    with col_a2:
-        st.markdown("**Valor de campo**")
-    with col_a3:
-        st.markdown("**Valor de referencia**")
-    with col_a4:
-        st.markdown("**¿En rango?**")
+# Selector para el Voltaje del Sistema (utilizado para calcular la referencia de fallo a tierra)
+voltaje_sistema = st.selectbox(
+    "Voltaje del sistema (V)",
+    options=[480, 440, 220, 127],
+    index=0,
+    key="voltaje_sistema_val"
+)
 
-    # Lista base de mediciones: (Nombre, Referencia por defecto)
-    mediciones_aislamiento = [
-        ("Voltaje de fallo a tierra", "< 5"),
-        ("Continuidad a tierra", "< 1")
-    ]
+# Encabezados de la tabla
+col_a1, col_a2, col_a3, col_a4 = st.columns([2.5, 2.5, 2.5, 1.5])
+with col_a1:
+    st.markdown("**Medición**")
+with col_a2:
+    st.markdown("**Valor de campo**")
+with col_a3:
+    st.markdown("**Valor de referencia**")
+with col_a4:
+    st.markdown("**¿En rango?**")
 
-    # Si se cumple alguna de las 3 condiciones de canalización, agregamos "Resistencia de aislamiento"
-    if len(canalizacion) > 0:
-        mediciones_aislamiento.append(("Resistencia de aislamiento", "> 5"))
+# Cálculo dinámico de la referencia para Voltaje de fallo a tierra (5% del voltaje del sistema)
+ref_fallo_tierra_val = float(voltaje_sistema) * 0.05
+ref_fallo_tierra_str = f"<= {ref_fallo_tierra_val:g} V"
+# Lista base de mediciones con la nueva lógica
+mediciones_aislamiento = [
+    ("Voltaje de fallo a tierra", ref_fallo_tierra_str),
+    ("Continuidad a tierra", "< 1ohm")
+]
 
-    for idx, (med_name, ref_defecto) in enumerate(mediciones_aislamiento):
-        c1, c2, c3, c4 = st.columns([2.5, 2.5, 2.5, 1.5])
-        
-        # 1. Nombre de la Medición
-        with c1:
-            st.markdown(f"**{med_name}**")
+# Si se cumple alguna de las condiciones de canalización, agregamos "Resistencia de aislamiento"
+if len(canalizacion) > 0:
+    mediciones_aislamiento.append(("Resistencia de aislamiento", "2Gohms"))
 
-        # 2. Valor de Campo
-        with c2:
-            val_obt = st.text_input(
-                f"Valor {med_name}", 
-                placeholder="Valor medido", 
-                key=f"ais_val_{idx}", 
-                label_visibility="collapsed"
-            )
+for idx, (med_name, ref_defecto) in enumerate(mediciones_aislamiento):
+    c1, c2, c3, c4 = st.columns([2.5, 2.5, 2.5, 1.5])
+            
+    # 1. Nombre de la Medición
+    with c1:
+        st.markdown(f"**{med_name}**")
 
-        # 3. Valor de Referencia
-        with c3:
-            val_ref = st.text_input(
-                f"Ref {med_name}", 
-                value=ref_defecto, 
-                placeholder="Ej. < 5 o > 5", 
-                key=f"ais_crit_{idx}", 
-                label_visibility="collapsed"
-            )
+    # 2. Valor de Campo
+    with c2:
+        val_obt = st.text_input(
+            f"Valor {med_name}", 
+            placeholder="Valor medido", 
+            key=f"ais_val_{idx}", 
+            label_visibility="collapsed"
+        )
 
-        # 4. Evaluación automática del Rango (☑ / ☒)
-        estado_rango = "---"
-        
-        if val_obt and val_obt.strip() != "":
-            try:
-                v_num = float(val_obt.strip())
-                ref_clean = val_ref.strip()
+    # 3. Valor de Referencia (Fijo / Calculado)
+    with c3:
+        st.markdown(f"{ref_defecto}")
 
+    # 4. Evaluación automática del Rango (☑ / ☒)
+    estado_rango = "---"       
+    if val_obt and val_obt.strip() != "":
+        try:
+            v_num = float(val_obt.strip())
+            
+            if "Voltaje de fallo a tierra" in med_name:
+                # Si el voltaje de fallo a tierra no es mayor al 5% del voltaje del sistema = ☑ / si es mayor = ☒
+                estado_rango = "☑" if v_num <= ref_fallo_tierra_val else "☒"
+            elif "Continuidad a tierra" in med_name:
+                # Si la continuidad a tierra no es mayor a 1ohm = ☑ / si es mayor = ☒
+                estado_rango = "☑" if v_num < 1.0 else "☒"
+            elif "Resistencia de aislamiento" in med_name:
+                estado_rango = "☑" if v_num > 2.0 else "☒"
+            else:
+                ref_clean = ref_defecto.strip()
                 if "<" in ref_clean:
                     limite = float(ref_clean.replace("<", "").strip())
                     estado_rango = "☑" if v_num < limite else "☒"
                 elif ">" in ref_clean:
                     limite = float(ref_clean.replace(">", "").strip())
                     estado_rango = "☑" if v_num > limite else "☒"
-                elif "-" in ref_clean:
-                    partes = ref_clean.split("-")
-                    min_v = float(partes[0].strip())
-                    max_v = float(partes[1].strip())
-                    estado_rango = "☑" if min_v <= v_num <= max_v else "☒"
                 else:
-                    # Tolerancia +- 5% para valores fijos
                     r_num = float(ref_clean)
                     estado_rango = "☑" if (r_num * 0.95) <= v_num <= (r_num * 1.05) else "☒"
-            except ValueError:
-                estado_rango = "⚠️"
+        except ValueError:
+            estado_rango = "⚠️"
 
-        with c4:
-            st.markdown(f"### {estado_rango}")
+    with c4:
+        st.markdown(f"### {estado_rango}")
 
-        # Guardar en la estructura del PDF
-        resultados_data.append({
-            'medicion': med_name,
-            'valor': val_obt if val_obt else "-",
-            'criterio': val_ref,
-            'conclusion': "En Rango (☑)" if estado_rango == "☑" else ("Fuera de Rango (☒)" if estado_rango == "☒" else "N/A"),
-            'es_categoria': False
-        })
-
-    st.divider()
-
-# 5. TERMOGRAFÍA
-    st.markdown("#### 🌡️ Análisis Termográfico")
+    # Guardar en la estructura del PDF
     resultados_data.append({
-        'medicion': "--- PRUEBA DE TERMOGRAFÍA ---", 
-        'valor': "", 
-        'criterio': "", 
-        'conclusion': "", 
-        'es_categoria': True
+        'medicion': med_name,
+        'valor': val_obt if val_obt else "-",
+        'criterio': ref_defecto,
+        'conclusion': "En Rango (☑)" if estado_rango == "☑" else ("Fuera de Rango (☒)" if estado_rango == "☒" else "N/A"),
+        'es_categoria': False
     })
 
-    # Encabezados de la tabla
-    col_t1, col_t2, col_t3, col_t4 = st.columns([2, 2.5, 2.5, 3])
-    with col_t1:
-        st.markdown("**Equipo**")
-    with col_t2:
-        st.markdown("**Temperatura (°C)**")
-    with col_t3:
-        st.markdown("**Rango de Operación**")
-    with col_t4:
-        st.markdown("**Evidencia Fotográfica**")
+st.divider()
 
-    # Lista de equipos con su rango de operación sugerido por defecto
-    elementos_termografia = [
-        ("Paneles", "25 - 65 °C"),
-        ("ITM", "< 60 °C"),
-        ("Inversores", "25 - 60 °C"),
-        ("Bloques de distribución", "< 60 °C")
-    ]
+# 5. TERMOGRAFÍA
+st.markdown("#### 🌡️ Análisis Termográfico")
 
-    # Diccionario opcional para almacenar imágenes capturadas si lo requieres luego en el PDF
-    fotos_termografia = {}
+# Contadores para la cantidad de inversores e ITMs
+col_cnt1, col_cnt2 = st.columns(2)
+with col_cnt1:
+    num_inversores = st.number_input("Cantidad de Inversores", min_value=1, value=1, step=1, key="num_inversores")
+with col_cnt2:
+    num_itms = st.number_input("Cantidad de ITM", min_value=1, value=1, step=1, key="num_itms")
 
-    for idx, (elem_name, rango_defecto) in enumerate(elementos_termografia):
-        c1, c2, c3, c4 = st.columns([2, 2.5, 2.5, 3])
-        
-        # 1. Equipo
-        with c1:
-            st.markdown(f"**{elem_name}**")
+resultados_data.append({
+    'medicion': "--- PRUEBA DE TERMOGRAFÍA ---", 
+    'valor': "", 
+    'criterio': "", 
+    'conclusion': "", 
+    'es_categoria': True
+})
 
-        # 2. Temperatura (Ingreso del usuario)
-        with c2:
-            temp_val = st.text_input(
-                f"Temp {elem_name}", 
-                placeholder="Ej. 45 °C", 
-                key=f"termo_val_{idx}", 
-                label_visibility="collapsed"
-            )
+# Encabezados de la tabla
+col_t1, col_t2, col_t3, col_t4 = st.columns([2, 2.5, 2.5, 3])
+with col_t1:
+    st.markdown("**Equipo**")
+with col_t2:
+    st.markdown("**Temperatura (°C)**")
+with col_t3:
+    st.markdown("**Rango de Operación**")
+with col_t4:
+    st.markdown("**Evidencia Fotográfica**")
 
-        # 3. Rango de Operación
-        with c3:
-            rango_val = st.text_input(
-                f"Rango {elem_name}", 
-                value=rango_defecto, 
-                placeholder="Ej. 25 - 65 °C", 
-                key=f"termo_crit_{idx}", 
-                label_visibility="collapsed"
-            )
+# Construir la lista de elementos dinámicamente según los contadores
+elementos_termografia = [("Paneles", "25 - 65 °C")]
 
-        # 4. Evidencia (Subir foto)
-        with c4:
-            foto_evidencia = st.file_uploader(
-                f"Foto {elem_name}", 
-                type=["jpg", "jpeg", "png"], 
-                key=f"termo_foto_{idx}", 
-                label_visibility="collapsed"
-            )
-            if foto_evidencia is not None:
-                fotos_termografia[elem_name] = foto_evidencia
+for i in range(1, int(num_inversores) + 1):
+    nombre_inv = f"Inversor {i}" if num_inversores > 1 else "Inversor"
+    elementos_termografia.append((nombre_inv, "25 - 60 °C"))
 
-        # Guardar registros de texto para la estructura final / PDF
-        resultados_data.append({
-            'medicion': f"Termografía - {elem_name}",
-            'valor': temp_val if temp_val else "-",
-            'criterio': rango_val,
-            'conclusion': "Foto adjunta" if foto_evidencia else "Sin foto",
-            'es_categoria': False
-        })
+for i in range(1, int(num_itms) + 1):
+    nombre_itm = f"ITM {i}" if num_itms > 1 else "ITM"
+    elementos_termografia.append((nombre_itm, "< 60 °C"))
+
+elementos_termografia.append(("Bloques de distribución", "< 60 °C"))
+
+# Diccionario opcional para almacenar imágenes capturadas
+fotos_termografia = {}
+
+for idx, (elem_name, rango_defecto) in enumerate(elementos_termografia):
+    c1, c2, c3, c4 = st.columns([2, 2.5, 2.5, 3])
+            
+    # 1. Equipo
+    with c1:
+        st.markdown(f"**{elem_name}**")
+
+    # 2. Temperatura (Ingreso del usuario)
+    with c2:
+        temp_val = st.text_input(
+            f"Temp {elem_name}", 
+            placeholder="Ej. 45 °C", 
+            key=f"termo_val_{idx}", 
+            label_visibility="collapsed"
+        )
+
+    # 3. Rango de Operación (Fijo, solo lectura)
+    with c3:
+        st.markdown(f"{rango_defecto}")
+
+    # 4. Evidencia (Subir foto)
+    with c4:
+        foto_evidencia = st.file_uploader(
+            f"Foto {elem_name}", 
+            type=["jpg", "jpeg", "png"], 
+            key=f"termo_foto_{idx}", 
+            label_visibility="collapsed"
+        )
+        if foto_evidencia is not None:
+            fotos_termografia[elem_name] = foto_evidencia
+
+    # Guardar registros de texto para la estructura final / PDF
+    resultados_data.append({
+        'medicion': f"Termografía - {elem_name}",
+        'valor': temp_val if temp_val else "-",
+        'criterio': rango_defecto,
+        'conclusion': "Foto adjunta" if foto_evidencia else "Sin foto",
+        'es_categoria': False
+    })
 
 # --- SECCIÓN 6: CONCLUSIÓN ---
 st.markdown("<h3 class='section-header'>6. Conclusión</h3>", unsafe_allow_html=True)
