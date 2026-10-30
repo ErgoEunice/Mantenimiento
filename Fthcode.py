@@ -9,7 +9,7 @@ from geopy.geocoders import Nominatim
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage, PageBreak
+    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage, PageBreak, PageTemplate, BaseDocTemplate, Frame
 )
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
@@ -73,10 +73,16 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. LOGIC Y PLANTILLAS DE PDF (REPORTLAB)
+# 2. LÓGICA Y PLANTILLAS DE PDF (REPORTLAB)
 # ==========================================
 
 class NumberedCanvas(canvas.Canvas):
+    """
+    Canvas personalizado para manejar de forma precisa los elementos gráficos 
+    fijos (banners, logos, líneas divisorias y pie de página) diferenciando 
+    la primera página de las páginas posteriores, permitiendo además 
+    el conteo total de páginas.
+    """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._saved_page_states = []
@@ -95,43 +101,116 @@ class NumberedCanvas(canvas.Canvas):
 
     def draw_page_decorations(self, page_count):
         self.saveState()
-        
-        # ENCABEZADO
-        if self._pageNumber > 1:
-            if os.path.exists("ErgoSolar_logo.png"):
-                self.drawImage("ErgoSolar_logo.png", 36, 740, width=120, height=40, preserveAspectRatio=True, mask='auto')
+
+        # ----------------------------------------------------
+        # DISEÑO EXCLUSIVO DE LA PRIMERA PÁGINA (PORTADA)
+        # ----------------------------------------------------
+        if self._pageNumber == 1:
+            if os.path.exists("Ergobannermant.png"):
+                ancho_banner = 612  # Ancho exacto del área útil (612 - 36 izq - 36 der)
+                alto_banner = 100
+                pos_x = (letter[0] - ancho_banner) / 2  # Centrado horizontal perfecto
+                pos_y = letter[1] - alto_banner - 20 
+                
+                self.drawImage(
+                    "Ergobannermant.png", 
+                    pos_x, 
+                    pos_y, 
+                    width=ancho_banner, 
+                    height=alto_banner, 
+                    preserveAspectRatio=True, 
+                    mask='auto'
+                )
             
+            # Pie de página para la primera página
+            if os.path.exists("ErgoPieReporte.png"):
+                self.drawImage("ErgoPieReporte.png", 36, 15, width=540, height=35, preserveAspectRatio=True, mask='auto')
+
+        # ----------------------------------------------------
+        # DISEÑO PARA LAS PÁGINAS POSTERIORES (2 EN ADELANTE)
+        # ----------------------------------------------------
+        else:
+            # Logo superior izquierdo
+            if os.path.exists("Ergologo.png"):
+                self.drawImage("Ergologo.png", 36, 740, width=120, height=40, preserveAspectRatio=True, mask='auto')
+            
+            # Texto superior derecho
             self.setFont("Helvetica-Bold", 11)
             self.setFillColor(colors.HexColor(COLOR_AZUL))
             self.drawRightString(576, 755, "Asset Management")
             
+            # Línea divisoria naranja (ubicada en y = 730)
             self.setStrokeColor(colors.HexColor(COLOR_NARANJA))
             self.setLineWidth(1)
             self.line(36, 730, 576, 730)
 
-        # PIE DE PÁGINA
-        if os.path.exists("ErgoPieReporte.png"):
-            self.drawImage("ErgoPieReporte.png", 36, 15, width=540, height=35, preserveAspectRatio=True, mask='auto')
-        else:
-            self.setFont("Helvetica", 8)
-            self.setFillColor(colors.HexColor(COLOR_GRIS_OSCURO))
-            self.drawString(36, 20, "Ergo Solar - Soluciones en Energía Fotovoltaica y Eficiencia Energética")
-            self.drawRightString(576, 20, f"Página {self._pageNumber} de {page_count}")
+            # Pie de página para páginas siguientes
+            if os.path.exists("ErgoPieReporte.png"):
+                self.drawImage("ErgoPieReporte.png", 36, 15, width=540, height=35, preserveAspectRatio=True, mask='auto')
+            else:
+                self.setFont("Helvetica", 8)
+                self.setFillColor(colors.HexColor(COLOR_GRIS_OSCURO))
+                self.drawString(36, 20, "Ergo Solar - Soluciones en Energía Fotovoltaica y Eficiencia Energética")
+                self.drawRightString(576, 20, f"Página {self._pageNumber} de {page_count}")
             
         self.restoreState()
 
 
 def generar_pdf_reporte(datos):
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(
-        buffer,
-        pagesize=letter,
-        leftMargin=36,
-        rightMargin=36,
-        topMargin=54,
-        bottomMargin=54
+
+    page_width, page_height = letter
+    left_margin = 36
+    right_margin = 36
+    bottom_margin = 54
+    
+    # ====================================================
+    # DEFINICIÓN MATEMÁTICA DE MÁRGENES Y FRAMES
+    # ====================================================
+    
+    # 1. Portada: El banner ocupa espacio arriba. Hacemos que el contenido empiece en y = 660 
+    # (dejando espacio libre debajo del banner que termina aproximadamente en y = 682).
+    top_margin_primera = 132  # 792 - 660 = 132 puntos desde arriba
+    altura_frame_primera = page_height - top_margin_primera - bottom_margin
+
+    frame_primera = Frame(
+        left_margin, 
+        bottom_margin, 
+        page_width - left_margin - right_margin, 
+        altura_frame_primera,
+        topPadding=0,
+        id='frame_primera'
     )
     
+    # 2. Páginas posteriores: La línea naranja está en y = 730. 
+    # Queremos que el texto comience justo debajo, en y = 715.
+    top_margin_posteriores = 68  # 792 - 715 = 77 puntos desde arriba
+    altura_frame_posteriores = page_height - top_margin_posteriores - bottom_margin
+
+    frame_posteriores = Frame(
+        left_margin, 
+        bottom_margin, 
+        page_width - left_margin - right_margin, 
+        altura_frame_posteriores,
+        topPadding=0,
+        id='frame_posteriores'
+    )
+
+    # Documento base que administra múltiples plantillas de página
+    doc = BaseDocTemplate(
+        buffer,
+        pagesize=letter,
+        leftMargin=left_margin,
+        rightMargin=right_margin,
+        bottomMargin=bottom_margin
+    )
+
+    # Asociamos los marcos a las plantillas de página
+    template_primera = PageTemplate(id='First', frames=frame_primera)
+    template_siguientes = PageTemplate(id='Later', frames=frame_posteriores)
+    
+    doc.addPageTemplates([template_primera, template_siguientes])
+
     story = []
     styles = getSampleStyleSheet()
     
@@ -152,7 +231,7 @@ def generar_pdf_reporte(datos):
         fontSize=12,
         leading=16,
         textColor=colors.HexColor(COLOR_AZUL),
-        spaceBefore=12,
+        spaceBefore=6,
         spaceAfter=6
     )
     
@@ -186,13 +265,11 @@ def generar_pdf_reporte(datos):
 
     contador_ilustraciones = 1
 
-    # BANNER
-    if os.path.exists("BannerMantenimiento.png"):
-        story.append(RLImage("BannerMantenimiento.png", width=540, height=100, preserveAspectRatio=True))
-        story.append(Spacer(1, 15))
+    # ====================================================
+    # CONSTRUCCIÓN DEL CONTENIDO (STORY)
+    # ====================================================
 
     # 1. INFORMACIÓN DEL CLIENTE
-    story.append(Paragraph("REPORTE DE MANTENIMIENTO PREVENTIVO / CORRECTIVO", style_titulo))
     
     data_cliente = [
         [Paragraph("<b>Planta:</b>", style_body), Paragraph(datos['info_cliente']['planta'], style_body),
@@ -324,7 +401,7 @@ def generar_pdf_reporte(datos):
     story.append(Paragraph("4. Dictamen y Conclusión Final", style_subtitulo))
     story.append(Paragraph(datos['dictamen'] if datos['dictamen'] else "Sin dictamen registrado.", style_body))
 
-    # Construir PDF
+    # Compilación final del documento utilizando el NumberedCanvas unificado
     doc.build(story, canvasmaker=NumberedCanvas)
     buffer.seek(0)
     return buffer
